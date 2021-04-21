@@ -26,7 +26,7 @@ It may take several minutes to run the entire notebook with a normal laptop.
 
 ## Introduction
 
-The UniverseMachine ([Behroozi et al. 2019](https://ui.adsabs.harvard.edu/abs/2019MNRAS.488.3143B/abstract)) is a framework to model star formation in dark matter halos. The UniverseMachine applies the theoretical model to calculate the star formation rate (SFR) of each dark matter halo at a given time. The SFR model is strongly linked to the merger history of halos. The final stellar mass is calculated as the integral of SFR, subtracting mass loss by stellar evolution. In order to compare the final results with observations, the final results are further corrected for observational effects. An MCMC method is also applied to calibrate the model to best fit the observations.
+The UniverseMachine ([Behroozi et al. 2019](https://ui.adsabs.harvard.edu/abs/2019MNRAS.488.3143B/abstract)) is a framework to model star formation in dark matter halos. It applies theoretical models to calculate the star formation rate (SFR) of each dark matter halo at a given time, and the SFR model is strongly linked to the merger history of halos. The final stellar mass is calculated as the integral of SFR, subtracting mass loss by stellar evolution. In order to compare the final results with observations, the final results are further corrected for observational effects. An MCMC method is also applied to calibrate the model to best fit the observations.
 
 The only input for the UniverseMachine is the merger trees from dark matter-only simulations and several adjustable parameters. The above features make the UniverseMachine a simple but powerful tool to analyze the stellar components of galaxies. For example, the UniverseMachine can predict the stellar mass-halo mass relation overcoming the disadvantages of the abundance matching method. Additionally, the UniverseMachine is a flexible database that can be post-processed to investigate other interesting features. In this work, we (I mean "I") first analyze the bimodal distribution of specific SFR (SSFR) by investigating different properties of high- and low-SSFR galaxies. Next, we apply a stellar population synthesis (SPS) analysis to calculate the colors for different subsets of galaxies. We conclude that the colors of star-forming and quenched galaxies are very different, while those of central and satellite galaxies are generally similar.
 
@@ -470,24 +470,82 @@ obs_data = obs[1].data
 obs_g = obs_data['ABSMAG'][:,1]
 obs_z = obs_data['ABSMAG'][:,4]
 obs_gz = obs_g - obs_z
+mass_to_light = -0.367 + (0.698*obs_gz) # Bell 2003
+obs_m = 10**mass_to_light * 10**(-0.4*(obs_g - 5.11))
 ```
 
 
 ```python
-mass_to_light = -0.367 + (0.698*obs_gz) # Bell 2003
-obs_m = 10**mass_to_light * 10**(-0.4*(obs_g - 5.11))
+# load SDSS DR8
+obs = fits.open('SDSSspecgalsDR8.fit')
+```
 
-x = 10**np.arange(8.0,11.6,0.2)
+
+```python
+obs_data = obs[1].data
+obs_g = obs_data['modelMag_g']
+obs_z = obs_data['modelMag_z']
+obs_gz = obs_g - obs_z
+obs_sfr = obs_data['sfr_tot_p50']
+obs_m = 10**obs_data['lgm_tot_p50']
+obs_ssfr = obs_sfr*1e9 / obs_m # in Gyr^-1
+```
+
+    <ipython-input-18-9b8d01fb8b91>:7: RuntimeWarning: divide by zero encountered in true_divide
+      obs_ssfr = obs_sfr*1e9 / obs_m # in Gyr^-1
+
+
+
+```python
+fig, ax0 = plt.subplots(figsize=(5,4), sharex=True, sharey=True)
+
+ax0.hist2d(obs_m, obs_ssfr, bins=[np.logspace(8,13,51), np.logspace(-5,0,51)],
+    norm=mpl.colors.LogNorm(), cmap='Greys')
+
+ax0.hlines(1e-2, 1e8, 1e13, color='k', alpha=0.5, ls='--')
+
+ax0.set_xscale('log')
+ax0.set_yscale('log')
+ax0.set_xlabel(r'$M_*\ ({\rm M_\odot})$')
+ax0.set_ylabel(r'$\dot{M}_*/M_*\ ({\rm Gyr^{-1}})$')
+
+# plt.savefig('sdss_ssfr_m.png')
+plt.show()
+```
+
+
+![png](output_25_0.png)
+
+
+
+```python
+x = 10**np.arange(9.0,11.41,0.2)
 obs_gz_16 = []
 obs_gz_50 = []
 obs_gz_84 = []
+obs_gz_sf_16 = []
+obs_gz_sf_50 = []
+obs_gz_sf_84 = []
+obs_gz_q_16 = []
+obs_gz_q_50 = []
+obs_gz_q_84 = []
 for i in range(len(x)-1):
-    idx = np.where((obs_m>x[i]) & (obs_m<x[i+1]))[0]
+    idx = np.where((obs_m>x[i]) & (obs_m<x[i+1]) & (obs_ssfr>0))[0]
     obs_gz_16.append(np.percentile(obs_gz[idx], 16))
     obs_gz_50.append(np.percentile(obs_gz[idx], 50))
     obs_gz_84.append(np.percentile(obs_gz[idx], 84))
+    
+    idx = np.where((obs_m>x[i]) & (obs_m<x[i+1]) & (obs_ssfr>1e-2))[0]
+    obs_gz_sf_16.append(np.percentile(obs_gz[idx], 16))
+    obs_gz_sf_50.append(np.percentile(obs_gz[idx], 50))
+    obs_gz_sf_84.append(np.percentile(obs_gz[idx], 84))
+    
+    idx = np.where((obs_m>x[i]) & (obs_m<x[i+1]) & (obs_ssfr<1e-2) & (obs_ssfr>0))[0]
+    obs_gz_q_16.append(np.percentile(obs_gz[idx], 16))
+    obs_gz_q_50.append(np.percentile(obs_gz[idx], 50))
+    obs_gz_q_84.append(np.percentile(obs_gz[idx], 84))
 
-obs_x = 10**np.arange(8.1,11.5,0.2)
+obs_x = 10**np.arange(9.1,11.31,0.2)
 ```
 
 
@@ -508,6 +566,10 @@ ax0.fill_between(x[:-1], gr_s_16[:-1], gr_s_84[:-1], facecolor='m', edgecolor=No
 
 ax0.plot(obs_x, obs_gz_50, c='k', lw=3, ls='--', alpha=0.5, label=r'$\rm NYU\ VAGC$')
 ax0.fill_between(obs_x, obs_gz_16, obs_gz_84, facecolor='k', edgecolor=None, alpha=0.1)
+ax0.plot(obs_x, obs_gz_sf_50, c='b', lw=3, ls='--', alpha=0.5)
+ax0.fill_between(obs_x, obs_gz_sf_16, obs_gz_sf_84, facecolor='b', edgecolor=None, alpha=0.1)
+ax0.plot(obs_x, obs_gz_q_50, c='r', lw=3, ls='--', alpha=0.5)
+ax0.fill_between(obs_x, obs_gz_q_16, obs_gz_q_84, facecolor='r', edgecolor=None, alpha=0.1)
 
 ax0.text(0.98, 0.98, r'$z=0$', transform=ax0.transAxes,
     horizontalalignment='right', verticalalignment='top', fontsize=14)
@@ -519,11 +581,12 @@ ax0.set_xlim(1e8, 1e12)
 ax0.set_ylim(0.6, 1.6)
 ax0.legend()
 
+# plt.savefig('g_z_m.png')
 plt.show()
 ```
 
 
-![png](output_24_0.png)
+![png](output_27_0.png)
 
 
 ## Summary
