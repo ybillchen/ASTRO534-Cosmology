@@ -488,11 +488,13 @@ obs_z = obs_data['modelMag_z']
 obs_gz = obs_g - obs_z
 obs_sfr = obs_data['sfr_tot_p50']
 obs_m = 10**obs_data['lgm_tot_p50']
-obs_ssfr = obs_sfr*1e9 / obs_m # in Gyr^-1
+obs_ssfr = 10**(obs_sfr)*1e9 / obs_m # in Gyr^-1
 ```
 
-    <ipython-input-18-9b8d01fb8b91>:7: RuntimeWarning: divide by zero encountered in true_divide
-      obs_ssfr = obs_sfr*1e9 / obs_m # in Gyr^-1
+    <ipython-input-37-c73910421a18>:7: RuntimeWarning: divide by zero encountered in true_divide
+      obs_ssfr = 10**(obs_sfr)*1e9 / obs_m # in Gyr^-1
+    <ipython-input-37-c73910421a18>:7: RuntimeWarning: invalid value encountered in true_divide
+      obs_ssfr = 10**(obs_sfr)*1e9 / obs_m # in Gyr^-1
 
 
 
@@ -519,7 +521,26 @@ plt.show()
 
 
 ```python
-x = 10**np.arange(9.0,11.41,0.2)
+fig, ax0 = plt.subplots(figsize=(5,4), sharex=True, sharey=True)
+
+ax0.hist2d(obs_m, obs_gz, bins=[np.logspace(8,13,51), np.linspace(0,3,51)],
+    norm=mpl.colors.LogNorm(), cmap='Greys')
+
+ax0.set_xscale('log')
+# ax0.set_yscale('log')
+ax0.set_xlabel(r'$M_*\ ({\rm M_\odot})$')
+ax0.set_ylabel(r'$\rm SDSS\ g-z$')
+
+plt.show()
+```
+
+
+![png](output_26_0.png)
+
+
+
+```python
+x = 10**np.arange(9,11.41,0.2)
 obs_gz_16 = []
 obs_gz_50 = []
 obs_gz_84 = []
@@ -564,7 +585,7 @@ ax0.fill_between(x, gr_c_16, gr_c_84, facecolor='c', edgecolor=None, alpha=0.2)
 ax0.plot(x[:-1], gr_s_50[:-1], c='m', ls='--', label=r'$\rm Satellite$')
 ax0.fill_between(x[:-1], gr_s_16[:-1], gr_s_84[:-1], facecolor='m', edgecolor=None, alpha=0.2)
 
-ax0.plot(obs_x, obs_gz_50, c='k', lw=3, ls='--', alpha=0.5, label=r'$\rm NYU\ VAGC$')
+ax0.plot(obs_x, obs_gz_50, c='k', lw=3, ls='--', alpha=0.5, label=r'$\rm SDSS\ DR8$')
 ax0.fill_between(obs_x, obs_gz_16, obs_gz_84, facecolor='k', edgecolor=None, alpha=0.1)
 ax0.plot(obs_x, obs_gz_sf_50, c='b', lw=3, ls='--', alpha=0.5)
 ax0.fill_between(obs_x, obs_gz_sf_16, obs_gz_sf_84, facecolor='b', edgecolor=None, alpha=0.1)
@@ -578,7 +599,7 @@ ax0.set_xscale('log')
 ax0.set_xlabel(r'$M_{*}\ ({\rm M_\odot})$')
 ax0.set_ylabel(r'$\rm SDSS\ g-z$')
 ax0.set_xlim(1e8, 1e12)
-ax0.set_ylim(0.6, 1.6)
+ax0.set_ylim(0.6, 2.0)
 ax0.legend()
 
 # plt.savefig('g_z_m.png')
@@ -586,7 +607,7 @@ plt.show()
 ```
 
 
-![png](output_27_0.png)
+![png](output_28_0.png)
 
 
 ## Summary
